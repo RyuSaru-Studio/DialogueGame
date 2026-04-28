@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neonregen - Cyberpunk Textadventure</title>
+  <link rel="icon" type="image/png" href="assets/Logoneonregen.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08090d;
+      --panel: #10131a;
+      --panel-2: #151a23;
+      --text: #e8f6ff;
+      --muted: #95a9b8;
+      --cyan: #4ee7ff;
+      --pink: #ff4fd8;
+      --lime: #b7ff5d;
+      --danger: #ff6a6a;
+      --line: rgba(78, 231, 255, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background:
+        linear-gradient(rgba(78, 231, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 79, 216, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 20% 10%, rgba(255, 79, 216, 0.16), transparent 30%),
+        radial-gradient(circle at 80% 20%, rgba(78, 231, 255, 0.18), transparent 34%),
+        var(--bg);
+      background-size: 28px 28px, 28px 28px, auto, auto, auto;
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    main {
+      width: min(980px, 100%);
+      height: min(760px, calc(100vh - 48px));
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 270px;
+      gap: 16px;
+    }
+
+    .terminal,
+    .sidebar {
+      border: 1px solid var(--line);
+      background: rgba(16, 19, 26, 0.92);
+      box-shadow: 0 0 36px rgba(78, 231, 255, 0.08);
+    }
+
+    .terminal {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+      background: rgba(21, 26, 35, 0.95);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+      color: var(--cyan);
+      text-shadow: 0 0 18px rgba(78, 231, 255, 0.42);
+    }
+
+    .status {
+      color: var(--lime);
+      font: 12px Consolas, monospace;
+    }
+
+    .audio-control {
+      position: relative;
+      display: grid;
+      place-items: center;
+      padding-bottom: 12px;
+      margin-bottom: -12px;
+    }
+
+    .mute-button {
+      width: 38px;
+      height: 34px;
+      min-height: 34px;
+      padding: 0;
+      text-align: center;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .volume-popover {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      width: 156px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      background: rgba(8, 9, 13, 0.96);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-4px);
+      transition: opacity 140ms ease, transform 140ms ease;
+      z-index: 3;
+    }
+
+    .audio-control:hover .volume-popover,
+    .audio-control:focus-within .volume-popover {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .volume-popover label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .volume-popover input {
+      width: 100%;
+      padding: 0;
+      accent-color: var(--cyan);
+    }
+
+    #log {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+      padding: 18px;
+      line-height: 1.58;
+      scrollbar-color: var(--cyan) transparent;
+    }
+
+    .entry {
+      margin: 0 0 18px;
+      white-space: pre-wrap;
+    }
+
+    .entry.system {
+      color: var(--muted);
+    }
+
+    .entry.player {
+      color: var(--lime);
+    }
+
+    .entry.story strong {
+      color: var(--pink);
+      font-weight: 700;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      padding: 14px;
+      background: rgba(8, 9, 13, 0.7);
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid rgba(149, 169, 184, 0.35);
+      background: #090d12;
+      color: var(--text);
+      padding: 12px 13px;
+      font: 15px Consolas, monospace;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(78, 231, 255, 0.12);
+    }
+
+    button {
+      border: 1px solid rgba(78, 231, 255, 0.55);
+      background: linear-gradient(135deg, rgba(78, 231, 255, 0.18), rgba(255, 79, 216, 0.16));
+      color: var(--text);
+      padding: 0 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: var(--pink);
+      color: white;
+    }
+
+    .start-menu {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      background: #02040a;
+      z-index: 20;
+    }
+
+    .start-panel {
+      position: relative;
+      width: min(100vw, 150vh);
+      aspect-ratio: 3 / 2;
+      background: url("assets/menu-background.png") center / contain no-repeat;
+      overflow: hidden;
+    }
+
+    .start-button {
+      position: absolute;
+      left: 50%;
+      top: 37.2%;
+      width: 26%;
+      min-width: 170px;
+      height: 7.8%;
+      min-height: 48px;
+      transform: translate(-50%, -50%);
+      padding: 0 28px;
+      border-color: rgba(255, 79, 216, 0.85);
+      background:
+        linear-gradient(135deg, rgba(255, 79, 216, 0.24), rgba(78, 231, 255, 0.18)),
+        rgba(8, 12, 18, 0.92);
+      color: white;
+      font-size: 38px;
+      text-align: center;
+      text-transform: uppercase;
+      text-shadow: 0 0 18px rgba(255, 79, 216, 0.8);
+      box-shadow:
+        0 0 0 1px rgba(78, 231, 255, 0.16) inset,
+        0 0 24px rgba(255, 79, 216, 0.34);
+      clip-path: polygon(8% 0, 92% 0, 100% 24%, 100% 76%, 92% 100%, 8% 100%, 0 76%, 0 24%);
+    }
+
+    .start-button:hover,
+    .start-button:focus-visible {
+      border-color: var(--cyan);
+      box-shadow: 0 0 30px rgba(78, 231, 255, 0.36);
+      outline: none;
+    }
+
+    body.game-started .start-menu {
+      display: none;
+    }
+
+    body:not(.game-started) main {
+      display: none;
+    }
+
+    .sidebar {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .box {
+      border: 1px solid rgba(149, 169, 184, 0.18);
+      background: rgba(8, 9, 13, 0.46);
+      padding: 12px;
+    }
+
+    .list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .meter {
+      height: 10px;
+      border: 1px solid rgba(78, 231, 255, 0.4);
+      background: #05070a;
+      overflow: hidden;
+    }
+
+    .meter span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, var(--cyan), var(--pink));
+      transition: width 220ms ease;
+    }
+
+    .quick {
+      display: grid;
+      gap: 8px;
+    }
+
+    .quick button {
+      min-height: 36px;
+      padding: 8px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .action-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .action-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .action-toggle span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .submenu {
+      display: none;
+      gap: 6px;
+      padding-left: 10px;
+      border-left: 1px solid rgba(78, 231, 255, 0.28);
+    }
+
+    .submenu.open {
+      display: grid;
+    }
+
+    .submenu button {
+      min-height: 32px;
+      color: var(--muted);
+    }
+
+    .submenu .empty-action {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        padding: 12px;
+        overflow: auto;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: calc(100vh - 24px);
+      }
+
+      .terminal {
+        min-height: 560px;
+        height: 68vh;
+      }
+
+      .sidebar {
+        order: -1;
+        max-height: none;
+        overflow: visible;
+      }
+
+      .start-panel {
+        width: min(100vw, 150vh);
+      }
+
+      .start-button {
+        width: 30%;
+        min-width: 140px;
+        min-height: 40px;
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="start-menu" id="startMenu">
+    <div class="start-panel">
+      <button class="start-button" id="startButton" type="button">Start</button>
+    </div>
+  </div>
+
+  <main>
+    <section class="terminal" aria-label="Spielterminal">
+      <header>
+        <h1>NEONREGEN // TEXTADVENTURE</h1>
+        <div class="header-actions">
+          <div class="status">LINK AKTIV</div>
+          <div class="audio-control">
+            <button class="mute-button" id="muteButton" type="button" aria-label="Musik stummschalten">♪</button>
+            <div class="volume-popover">
+              <label for="volumeSlider">Musik</label>
+              <input id="volumeSlider" type="range" min="0" max="100" value="35">
+            </div>
+          </div>
+        </div>
+      </header>
+      <div id="log" aria-live="polite"></div>
+      <form class="input-row" id="commandForm">
+        <input id="commandInput" autocomplete="off" spellcheck="false" placeholder="Befehl eingeben, z.B. 'umsehen'">
+        <button type="submit">Senden</button>
+      </form>
+    </section>
+
+    <aside class="sidebar">
+      <div class="box">
+        <h2>Runner</h2>
+        <ul class="list" id="stats"></ul>
+      </div>
+      <div class="box">
+        <h2>Systemdruck</h2>
+        <div class="meter"><span id="heat"></span></div>
+      </div>
+      <div class="box">
+        <h2>Befehle</h2>
+        <ul class="list">
+          <li>umsehen</li>
+          <li>nimm [objekt]</li>
+          <li>benutze [objekt]</li>
+          <li>gehe [ort]</li>
+          <li>inventar</li>
+          <li>hilfe</li>
+        </ul>
+      </div>
+      <div class="box quick" id="quickActions"></div>
+    </aside>
+  </main>
+
+  <audio id="backgroundMusic" src="assets/ES_Cold Cash - dozeoff.mp3" loop preload="auto"></audio>
+
+  <script>
+    const rooms = {
+      alley: {
+        name: "Gasse 17",
+        text: "Saurer Regen zischt auf Kabeln und Reklamen. Über dir flackert ein Hologramm: <strong>ARES-KLINIK: Wir reparieren, was du bist.</strong>\n\nZwischen Müllcontainern liegt ein verbogener Datensplitter. Am Ende der Gasse führt eine Stahltür in den Club Kobalt.",
+        exits: { club: "Club Kobalt" },
+        items: ["datensplitter"]
+      },
+      club: {
+        name: "Club Kobalt",
+        text: "Der Bass schlägt wie ein zweites Herz. Gesichter verschwimmen im Chromlicht. Hinter der Bar beobachtet dich Mira, eine Fixerin mit silbernen Augen.\n\nEine Treppe führt zum Dach. Durch eine Seitentür geht es zum Markt.",
+        exits: { alley: "Gasse 17", roof: "Dach", market: "Nachtmarkt" },
+        items: []
+      },
+      market: {
+        name: "Nachtmarkt",
+        text: "Unter Planen verkaufen Händler illegale Firmware, warme Nudeln und fremde Erinnerungen. Ein alter Automat blinkt: <strong>ZUGANGSKARTE ERFORDERLICH.</strong>\n\nIm Staub liegt eine leere Credstick-Hülle. Sie wirkt wertlos, aber Ares hat früher Biometrie in genau solchen Hüllen versteckt.",
+        exits: { club: "Club Kobalt", vault: "Transit-Knoten" },
+        items: ["credstick-huelle"]
+      },
+      roof: {
+        name: "Dach",
+        text: "Die Stadt liegt unter dir wie eine Platine aus Licht. Eine Drohne kreist über dem Nachbargebäude. An einer Antenne steckt ein tragbarer Jammer.",
+        exits: { club: "Club Kobalt" },
+        items: ["jammer"]
+      },
+      vault: {
+        name: "Transit-Knoten",
+        text: "Ein verlassener U-Bahn-Knoten. Hinter Panzerglas schläft ein Konzernserver, der deine alte Identität gelöscht hat. Der Zugang summt und wartet auf ein Signal.\n\nEine Servicebahn verschwindet in Richtung Ares-Klinik, aber der Server muss erst geöffnet werden.",
+        exits: { market: "Nachtmarkt", datawell: "Datenbrunnen" },
+        items: []
+      },
+      datawell: {
+        name: "Datenbrunnen",
+        text: "Du stehst in einer alten Wartungskammer voller Glasfaserleitungen. Holografische Akten schweben wie kalte Geister in der Luft.\n\nEin Dossier mit deinem Namen steckt halb entschlüsselt in einem Terminal.",
+        exits: { vault: "Transit-Knoten", clinicGate: "Ares-Kliniktor" },
+        items: ["ares-dossier"]
+      },
+      clinicGate: {
+        name: "Ares-Kliniktor",
+        text: "Schwarz glänzende Drehkreuze, Kameras in jedem Winkel, ein Sicherheitslaser über dem Eingang. Dahinter liegt die Klinik, in der deine Erinnerung verkauft wurde.",
+        exits: { datawell: "Datenbrunnen", clinicLobby: "Klinik-Lobby" },
+        items: []
+      },
+      clinicLobby: {
+        name: "Klinik-Lobby",
+        text: "Die Lobby riecht nach Desinfektion und Angst. Ein Empfangsavatar lächelt zu lange. Links liegt das Archiv, rechts ein versiegeltes Labor.",
+        exits: { clinicGate: "Ares-Kliniktor", archive: "Archiv", lab: "Labor" },
+        items: ["medpatch"]
+      },
+      archive: {
+        name: "Archiv",
+        text: "Serverracks surren hinter Milchglas. Hier lagern Patientenakten, Schuldenverträge und gelöschte Namen.",
+        exits: { clinicLobby: "Klinik-Lobby" },
+        items: ["patientenakte"]
+      },
+      lab: {
+        name: "Labor",
+        text: "In der Mitte des Labors hängt ein Neural-Kern in einer magnetischen Wiege. Er enthält die Rohkopie deiner Erinnerung.",
+        exits: { clinicLobby: "Klinik-Lobby", broadcast: "Sendemast" },
+        items: ["neural-kern"]
+      },
+      broadcast: {
+        name: "Sendemast",
+        text: "Über der Klinik ragt ein alter Sendemast in den Neonregen. Von hier aus kann man Ares' Geheimnisse in die ganze Stadt drücken.",
+        exits: { lab: "Labor" },
+        items: []
+      }
+    };
+
+    const state = {
+      room: "alley",
+      inventory: [],
+      heat: 12,
+      metMira: false,
+      decoded: false,
+      card: false,
+      bioChip: false,
+      vaultOpen: false,
+      gateBlind: false,
+      labOpen: false,
+      evidencePacked: false,
+      ending: false
+    };
+
+    const aliases = {
+      schau: "umsehen",
+      ansehen: "umsehen",
+      look: "umsehen",
+      take: "nimm",
+      get: "nimm",
+      use: "benutze",
+      geh: "gehe",
+      go: "gehe",
+      inv: "inventar",
+      i: "inventar"
+    };
+
+    const log = document.querySelector("#log");
+    const input = document.querySelector("#commandInput");
+    const form = document.querySelector("#commandForm");
+    const stats = document.querySelector("#stats");
+    const heat = document.querySelector("#heat");
+    const quickActions = document.querySelector("#quickActions");
+    const music = document.querySelector("#backgroundMusic");
+    const muteButton = document.querySelector("#muteButton");
+    const volumeSlider = document.querySelector("#volumeSlider");
+    const startButton = document.querySelector("#startButton");
+
+    let lastVolume = Number(volumeSlider.value) / 100;
+    music.volume = lastVolume;
+
+    function updateMuteButton() {
+      if (music.muted || music.volume === 0) {
+        muteButton.textContent = "×";
+        muteButton.setAttribute("aria-label", "Musik einschalten");
+      } else {
+        muteButton.textContent = "♪";
+        muteButton.setAttribute("aria-label", "Musik stummschalten");
+      }
+    }
+
+    function startMusic() {
+      music.play().catch(() => {
+        addEntry("Musik bereit. Klicke oben rechts auf ♪ oder ins Spiel, falls dein Browser Autoplay blockiert.", "system");
+      });
+    }
+
+    muteButton.addEventListener("click", () => {
+      if (music.paused) {
+        music.play().catch(() => {});
+      }
+      music.muted = !music.muted;
+      updateMuteButton();
+    });
+
+    volumeSlider.addEventListener("input", () => {
+      const volume = Number(volumeSlider.value) / 100;
+      music.volume = volume;
+      if (volume > 0) {
+        lastVolume = volume;
+        music.muted = false;
+      } else {
+        music.muted = true;
+      }
+      updateMuteButton();
+    });
+
+    document.addEventListener("pointerdown", () => {
+      if (document.body.classList.contains("game-started") && music.paused) {
+        music.volume = lastVolume;
+        startMusic();
+      }
+    }, { once: true });
+
+    startButton.addEventListener("click", () => {
+      document.body.classList.add("game-started");
+      input.focus();
+      startMusic();
+    });
+
+    updateMuteButton();
+
+    function addEntry(text, type = "story") {
+      const p = document.createElement("p");
+      p.className = `entry ${type}`;
+      p.innerHTML = text;
+      log.appendChild(p);
+      requestAnimationFrame(() => {
+        log.scrollTop = log.scrollHeight;
+      });
+    }
+
+    function updateUi() {
+      const carried = [...state.inventory];
+      if (state.bioChip && !carried.includes("biometrie-chip")) carried.push("biometrie-chip");
+      if (state.card && !carried.includes("zugangskarte")) carried.push("zugangskarte");
+      stats.innerHTML = `
+        <li>Ort: ${rooms[state.room].name}</li>
+        <li>Inventar: ${carried.length ? carried.join(", ") : "leer"}</li>
+        <li>Status: ${state.ending ? "Abgeschlossen" : "Auf der Flucht"}</li>
+      `;
+      heat.style.width = `${Math.min(state.heat, 100)}%`;
+
+      quickActions.innerHTML = "";
+      addQuickButton("umsehen", () => runCommand("umsehen"));
+      addQuickButton("inventar", () => runCommand("inventar"));
+      if (state.room === "club") {
+        addQuickButton("mira", () => runCommand("mira"));
+      }
+
+      addActionGroup("gehe", Object.entries(rooms[state.room].exits).map(([id, label]) => ({
+        label,
+        command: `gehe ${id}`
+      })));
+
+      addActionGroup("nimm", rooms[state.room].items.map((item) => ({
+        label: prettyName(item),
+        command: `nimm ${item}`
+      })));
+
+      const usableItems = state.inventory.map((item) => ({
+        label: prettyName(item),
+        command: `benutze ${item}`
+      }));
+
+      if (state.card) {
+        usableItems.push({ label: "Zugangskarte", command: "benutze zugangskarte" });
+      }
+
+      if (state.room === "broadcast") {
+        usableItems.push({ label: "Beweise senden", command: "benutze beweise" });
+      }
+
+      addActionGroup("benutze", usableItems);
+    }
+
+    function prettyName(value) {
+      return value
+        .split("-")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+
+    function addQuickButton(label, onClick) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.addEventListener("click", onClick);
+      quickActions.appendChild(button);
+    }
+
+    function addActionGroup(label, actions) {
+      const group = document.createElement("div");
+      group.className = "action-group";
+
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "action-toggle";
+      toggle.innerHTML = `${label} <span>${actions.length || "keine"}</span>`;
+
+      const submenu = document.createElement("div");
+      submenu.className = "submenu";
+
+      toggle.addEventListener("click", () => {
+        submenu.classList.toggle("open");
+      });
+
+      if (actions.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty-action";
+        empty.textContent = "Gerade keine Option.";
+        submenu.appendChild(empty);
+      } else {
+        actions.forEach((action) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = action.label;
+          button.addEventListener("click", () => runCommand(action.command));
+          submenu.appendChild(button);
+        });
+      }
+
+      group.appendChild(toggle);
+      group.appendChild(submenu);
+      quickActions.appendChild(group);
+    }
+
+    function describeRoom() {
+      const room = rooms[state.room];
+      const items = room.items.length
+        ? `\n\nDu siehst: <strong>${room.items.join(", ")}</strong>.`
+        : "";
+      const exits = `\n\nAusgänge: ${Object.values(room.exits).join(", ")}.`;
+      addEntry(`<strong>${room.name}</strong>\n${room.text}${items}${exits}`);
+    }
+
+    function normalize(text) {
+      return text.trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function has(item) {
+      return state.inventory.includes(item);
+    }
+
+    function runCommand(raw) {
+      if (state.ending) {
+        addEntry("Die Geschichte ist beendet. Lade die Seite neu, um erneut zu starten.", "system");
+        return;
+      }
+
+      const cleaned = normalize(raw);
+      if (!cleaned) return;
+
+      addEntry(`&gt; ${cleaned}`, "player");
+      input.value = "";
+
+      const parts = cleaned.split(" ");
+      const verb = aliases[parts[0]] || parts[0];
+      const target = parts.slice(1).join("-");
+
+      if (verb === "hilfe") {
+        addEntry("Du kannst Befehle wie <strong>umsehen</strong>, <strong>mira</strong>, <strong>nimm datensplitter</strong>, <strong>benutze jammer</strong>, <strong>gehe club</strong> oder <strong>inventar</strong> eingeben. Rechts öffnen die Buttons passende Untermenüs.");
+      } else if (verb === "umsehen") {
+        describeRoom();
+      } else if (verb === "inventar") {
+        addEntry(state.inventory.length ? `Du trägst: <strong>${state.inventory.join(", ")}</strong>.` : "Deine Taschen sind leer. Noch.");
+      } else if (verb === "nimm") {
+        takeItem(target);
+      } else if (verb === "gehe") {
+        goTo(target);
+      } else if (verb === "benutze") {
+        useItem(target);
+      } else if (cleaned.includes("mira")) {
+        talkToMira();
+      } else {
+        state.heat += 3;
+        addEntry("Der Befehl versickert im Neonrauschen. Versuche <strong>hilfe</strong>, wenn du feststeckst.", "system");
+      }
+
+      updateUi();
+    }
+
+    function takeItem(target) {
+      const room = rooms[state.room];
+      const item = room.items.find((name) => name === target || name.replace("-", "") === target.replace("-", ""));
+      if (!item) {
+        addEntry("Hier liegt nichts, was auf diesen Namen hört.", "system");
+        return;
+      }
+      room.items = room.items.filter((name) => name !== item);
+      state.inventory.push(item);
+      addEntry(`Du nimmst <strong>${item}</strong>.`);
+      if (item === "datensplitter") {
+        addEntry("Der Splitter ist warm. Darauf pulst eine Nachricht: <strong>Finde Mira. Frage nach deinem Namen.</strong>\n\nFunktion: Er entschlüsselt deine gelöschte Identität und öffnet später Ares-Daten.");
+      }
+      if (item === "jammer") {
+        addEntry("Der Jammer kann Kameras und Drohnen für kurze Zeit blind machen.\n\nFunktion: Er senkt Systemdruck und hilft Mira, dir eine sichere Zugangskarte zu bauen.");
+      }
+      if (item === "credstick-huelle") {
+        addEntry("Die Hülle klappert. Vielleicht steckt innen mehr als Plastik.\n\nFunktion: Benutze sie, um nach versteckter Biometrie zu suchen.");
+      }
+    }
+
+    function goTo(target) {
+      const room = rooms[state.room];
+      const directKey = Object.keys(room.exits).find((id) => id.toLowerCase() === target.toLowerCase());
+      const byName = Object.entries(room.exits).find(([, name]) => normalize(name).replace(" ", "-") === target);
+      const destination = directKey || (byName && byName[0]);
+
+      if (!destination) {
+        addEntry("Dorthin führt von hier kein sicherer Weg.", "system");
+        return;
+      }
+
+      if (destination === "vault" && !state.card) {
+        state.heat += 9;
+        addEntry("Der Automat blockiert dich. Ohne Zugangskarte öffnet sich der Transit-Knoten nicht.");
+        return;
+      }
+
+      if (destination === "datawell" && !state.vaultOpen) {
+        state.heat += 6;
+        addEntry("Das Panzerglas bleibt geschlossen. Benutze im Transit-Knoten zuerst Zugangskarte und Datensplitter.");
+        return;
+      }
+
+      if (destination === "clinicLobby" && !state.gateBlind) {
+        state.heat += 12;
+        addEntry("Die Kameras am Kliniktor erfassen dich sofort. Du brauchst etwas, das Konzernaugen blind macht.");
+        return;
+      }
+
+      if (destination === "lab" && !state.labOpen) {
+        state.heat += 10;
+        addEntry("Das Labor verlangt eine passende Patientenakte. Ohne deine Akte bleibt die Schleuse verriegelt.");
+        return;
+      }
+
+      if (destination === "broadcast" && !has("neural-kern")) {
+        addEntry("Ohne Neural-Kern gibt es nichts zu senden. Das Labor wartet noch.");
+        return;
+      }
+
+      state.room = destination;
+      state.heat += 2;
+      describeRoom();
+    }
+
+    function talkToMira() {
+      if (state.room !== "club") {
+        addEntry("Mira ist nicht hier. Nur Regen, Reklame und schlechte Entscheidungen.");
+        return;
+      }
+      state.metMira = true;
+      addEntry("Mira lehnt sich über den Tresen. 'Du willst deinen Namen zurück? Dann brauche ich drei Dinge: den Datensplitter, einen Jammer gegen die Kameras und einen Biometriechip aus alter Ares-Hardware.'");
+      if (has("datensplitter") && has("jammer") && state.bioChip && !state.card) {
+        state.card = true;
+        addEntry("Du legst Splitter, Jammer und Biometriechip auf den Tresen. Mira baut daraus eine <strong>Zugangskarte</strong>, die nach dir riecht, klingt und lügt.\n\n'Im Transit-Knoten findest du nicht das Ende, Nox. Nur die Tür zur Klinik.'");
+      } else if (state.card) {
+        addEntry("Mira nickt zur Seitentür. 'Transit-Knoten, dann Datenbrunnen, dann Klinik. Und vergiss nicht: Beweise sind wertvoller als Rache.'");
+      } else {
+        const missing = [];
+        if (!has("datensplitter")) missing.push("Datensplitter");
+        if (!has("jammer")) missing.push("Jammer");
+        if (!state.bioChip) missing.push("Biometriechip aus der Credstick-Hülle");
+        addEntry(`Dir fehlt noch: <strong>${missing.join(", ")}</strong>.`);
+      }
+    }
+
+    function useItem(target) {
+      if (target === "datensplitter" && has("datensplitter")) {
+        if (state.room === "vault" && state.card) {
+          state.decoded = true;
+          state.vaultOpen = true;
+          addEntry("Du steckst Zugangskarte und Datensplitter in den Server. Erst erscheint dein Name: <strong>NOX VALE</strong>. Dann öffnet sich das Panzerglas zum Datenbrunnen.\n\nFunktion erfüllt: Der Datensplitter ist dein Schlüssel zu den Ares-Daten.");
+        } else if (state.room === "archive" && has("patientenakte")) {
+          state.labOpen = true;
+          addEntry("Der Datensplitter vergleicht deine Akte mit der gelöschten Identität. Die Labor-Schleuse akzeptiert dich als Patient und Opfer zugleich.");
+        } else {
+          state.decoded = true;
+          addEntry("Du jagst Strom durch den Splitter. Ein Name erscheint: <strong>NOX VALE</strong>. Darunter Koordinaten zum Transit-Knoten.\n\nFunktion: Im Transit-Knoten kann er den Weg zum Datenbrunnen öffnen.");
+        }
+        return;
+      }
+
+      if (target === "jammer" && has("jammer")) {
+        state.heat = Math.max(0, state.heat - 22);
+        if (state.room === "clinicGate") {
+          state.gateBlind = true;
+          addEntry("Der Jammer kreischt im Ultraschallbereich. Die Kameras am Kliniktor frieren ein, der Sicherheitslaser wird zu einem harmlosen roten Strich.\n\nFunktion erfüllt: Der Weg in die Klinik-Lobby ist offen.");
+        } else {
+          addEntry("Der Jammer knackt. Überwachungskameras frieren ein, Drohnen verlieren dich für ein paar kostbare Minuten.\n\nFunktion: Am Ares-Kliniktor kann er den Eingang freischalten.");
+        }
+        return;
+      }
+
+      if (target === "credstick-huelle" && has("credstick-huelle")) {
+        if (!state.bioChip) {
+          state.bioChip = true;
+          addEntry("Du brichst die Credstick-Hülle auf. Innen klebt ein hauchdünner <strong>Biometriechip</strong> mit altem Ares-Siegel.\n\nFunktion erfüllt: Mira kann daraus eine Zugangskarte bauen.");
+        } else if (has("ares-dossier") && has("patientenakte") && has("neural-kern")) {
+          state.evidencePacked = true;
+          addEntry("Du packst Dossier, Patientenakte und Neural-Kern-Signatur in die Credstick-Hülle. Aus Müll wird ein Beweiscontainer.");
+        } else {
+          addEntry("Die Hülle ist geöffnet. Später kann sie Beweise tragen, wenn du genug Material aus der Klinik findest.");
+        }
+        return;
+      }
+
+      if ((target === "zugangskarte" || target === "karte") && state.card) {
+        if (state.room === "vault") {
+          addEntry("Die Zugangskarte imitiert deine Biometrie. Der Transit-Server klickt, verlangt aber den Datensplitter als zweiten Schlüssel.");
+        } else {
+          addEntry("Die Karte pulst grün. Sie ist für den Transit-Knoten gedacht.");
+        }
+        return;
+      }
+
+      if (target === "patientenakte" && has("patientenakte")) {
+        if (state.room === "archive") {
+          state.labOpen = true;
+          addEntry("Du hältst die Patientenakte gegen den Scanner. Die Datei bestätigt: Nox Vale, Versuchsperson 7, Gedächtnisextraktion erfolgreich.\n\nDie Labor-Schleuse ist jetzt offen.");
+        } else {
+          addEntry("Die Akte beweist, dass Ares dich als Versuchsperson geführt hat. Im Archiv kann sie die Labor-Schleuse öffnen.");
+        }
+        return;
+      }
+
+      if (target === "ares-dossier" && has("ares-dossier")) {
+        addEntry("Das Dossier nennt Käufer, Ärzte und Konten. Es ist die politische Bombe, die Mira meinte.");
+        return;
+      }
+
+      if (target === "neural-kern" && has("neural-kern")) {
+        addEntry("Der Neural-Kern antwortet mit Fragmenten: dein Lachen, ein Verrat, ein unterschriebener Vertrag. Am Sendemast kannst du ihn veröffentlichen.");
+        return;
+      }
+
+      if (target === "beweise" || target === "sendemast") {
+        if (state.room === "broadcast") {
+          finishGame();
+        } else {
+          addEntry("Dafür brauchst du den Sendemast über dem Labor.");
+        }
+        return;
+      }
+
+      if (target === "mira") {
+        talkToMira();
+        return;
+      }
+
+      addEntry("Das bringt gerade nichts. Noch nicht.", "system");
+    }
+
+    function finishGame() {
+      if (!has("ares-dossier") || !has("patientenakte") || !has("neural-kern")) {
+        addEntry("Der Sendemast wartet, aber deine Beweise sind noch unvollständig. Du brauchst Ares-Dossier, Patientenakte und Neural-Kern.");
+        return;
+      }
+      if (!state.evidencePacked) {
+        addEntry("Du hast die Beweise, aber sie sind noch roh. Benutze die Credstick-Hülle, um sie in einen sendbaren Beweiscontainer zu packen.");
+        return;
+      }
+      state.ending = true;
+      addEntry("<strong>Der Sendemast erwacht.</strong>\n\nDie Credstick-Hülle streamt Ares' Dossier, deine Patientenakte und die Neural-Kern-Signatur in jedes offene Netz der Stadt. Reklametafeln flackern. Nachrichtenavatare stolpern über Worte wie Gedächtnisdiebstahl, Schuldknebelung und illegale Kopien.\n\nMira schickt nur eine Zeile: <strong>'Jetzt hast du einen Namen. Mach etwas Gefährliches daraus.'</strong>\n\nDu siehst hinunter auf die Klinik. Ares kann dich jagen, aber nicht mehr löschen.\n\n<strong>ENDE: Neonregen bricht lauter</strong>");
+    }
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      runCommand(input.value);
+    });
+
+    addEntry("Bootsequenz abgeschlossen. Willkommen im Sprawl.", "system");
+    describeRoom();
+    updateUi();
+    input.focus();
+  </script>
+</body>
+</html>
